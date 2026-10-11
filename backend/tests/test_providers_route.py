@@ -1,9 +1,12 @@
+"""API tests for provider safety and validation."""
+
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
 def test_providers_never_include_credentials() -> None:
+    """Provider metadata must never return credentials."""
     response = TestClient(app).get("/api/v1/providers")
 
     assert response.status_code == 200
@@ -13,6 +16,7 @@ def test_providers_never_include_credentials() -> None:
 
 
 def test_unknown_provider_is_rejected() -> None:
+    """Comparison requests must name registered providers."""
     response = TestClient(app).post(
         "/api/v1/compare",
         json={
@@ -31,4 +35,3 @@ def test_unknown_provider_is_rejected() -> None:
     )
 
     assert response.status_code == 422
-

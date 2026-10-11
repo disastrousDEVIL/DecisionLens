@@ -1,3 +1,5 @@
+"""DecisionLens HTTP application."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,5 +20,5 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 
 @app.get("/health")
 async def health() -> dict[str, str]:
+    """Return a lightweight service health response."""
     return {"status": "ok", "service": settings.app_name}
-
