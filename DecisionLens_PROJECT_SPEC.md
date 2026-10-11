@@ -1,24 +1,24 @@
-# S1Compare — Product & Technical Specification
+# DecisionLens — Product & Technical Specification
 
 **Document type:** Product Requirements + Technical Design + Benchmark Methodology  
 **Status:** Implementation-ready v1.0  
 **Date:** 2026-10-01  
-**Working project name:** S1Compare  
+**Project name:** DecisionLens
 **Primary implementer:** Codex / software engineer  
 
 ---
 
 ## 1. Executive Summary
 
-S1Compare is a developer-facing benchmarking and analysis platform for **bounded AI decision systems**. Its first release compares three providers:
+DecisionLens is a developer-facing benchmarking and analysis platform for **bounded AI decision systems**. It benchmarks and compares Jev, Cloudflare Clef-flash, and OpenAI Decisions API across accuracy, calibration, latency, cost, and robustness. Its first release compares three providers:
 
 1. **TypeSafe Jev**
-2. **Lev** (open System One model)
+2. **Cloudflare Clef-flash**
 3. **OpenAI Decisions API**
 
 The product is not an agent framework and does not execute downstream actions. It answers one question: **how do different decision systems behave on the same bounded decision problems?**
 
-S1Compare must compare correctness, probability quality, latency, reliability, robustness, throughput, and cost while preserving full run metadata so results can be reproduced and audited.
+DecisionLens must compare correctness, probability quality, latency, reliability, robustness, throughput, and cost while preserving full run metadata so results can be reproduced and audited.
 
 The application must support existing external benchmark suites rather than inventing a competing benchmark from scratch. In particular, the existing Hanno Labs DecisionBench should be treated as an ingestible benchmark suite, not as this project's name or proprietary dataset.
 
@@ -26,7 +26,7 @@ The application must support existing external benchmark suites rather than inve
 
 ## 2. Problem Statement
 
-General-purpose LLMs are increasingly being supplemented by systems designed specifically for classification, routing, scoring, verification, moderation, and other bounded decisions. Jev, Lev, and OpenAI Decisions represent different implementations of this idea.
+General-purpose LLMs are increasingly being supplemented by systems designed specifically for classification, routing, scoring, verification, moderation, and other bounded decisions. Jev, Cloudflare Clef-flash, and OpenAI Decisions represent different implementations of this idea.
 
 Developers need a fair way to answer questions such as:
 
@@ -47,9 +47,9 @@ Existing leaderboards are useful but do not provide a single interactive environ
 
 ### 3.1 Primary goals
 
-S1Compare shall:
+DecisionLens shall:
 
-- Compare Jev, Lev, and OpenAI Decisions through a common provider abstraction.
+- Compare Jev, Cloudflare Clef-flash, and OpenAI Decisions through a common provider abstraction.
 - Run the same semantically equivalent decision tasks against every enabled provider.
 - Support binary, categorical, ordinal, and multi-label decision workloads.
 - Preserve native provider responses while also normalizing them into a common schema.
@@ -101,32 +101,30 @@ Expected native primitives include:
 
 Preserve returned probability/confidence information and native usage metadata.
 
-### 5.2 Lev
+### 5.2 Cloudflare Clef-flash
 
-Lev is an open System One decision model based on Qwen3.5-4B + LoRA and exposes a Jev-compatible `/v1/systemone` wire protocol.
+Cloudflare Clef-flash is a hosted decision model available through Cloudflare Workers AI. It accepts typed System One-style questions and returns structured answers with probability information.
 
-Lev must be treated as a separate provider even though its protocol is compatible with Jev. The adapter must record:
+The adapter must isolate Cloudflare's Workers AI request and response mapping from domain logic and record:
 
-- exact model/revision
-- serving backend
-- hardware profile
-- local/remote endpoint
-- runtime version
+- model identifier (`@cf/cloudflare/clef-flash`)
+- Cloudflare endpoint type
+- provider-reported usage and request metadata when available
 
-Headline latency comparisons must use **end-to-end client-observed latency**. Compute-only latency may be recorded separately when available, but must never be mixed with hosted-provider end-to-end latency.
+Headline latency comparisons must use **end-to-end client-observed latency**.
 
 ### 5.3 OpenAI Decisions API
 
-OpenAI Decisions was announced in limited preview. The public contract may change.
+OpenAI Decisions is in public beta. Its public contract may change.
 
 Therefore:
 
-- implement it behind a provider adapter and feature flag
+- implement it behind a provider adapter and configuration flag
 - do not hard-code undocumented endpoint details into domain logic
 - keep request/response mapping isolated in the provider module
 - capability-detect probabilities/confidence, batching, image input, usage, and cost metadata
 - if probability distributions are unavailable, probability-dependent metrics must be shown as `N/A`, not approximated
-- if preview access is unavailable, the application must still run with Jev and Lev and expose OpenAI Decisions as `unavailable`
+- if OpenAI credentials are unavailable or the provider is disabled, the application must still run with Jev and Cloudflare Clef-flash and expose OpenAI Decisions as `unavailable`
 
 Never fabricate probabilities by asking another LLM to estimate confidence.
 
@@ -234,7 +232,7 @@ Results must be clearly labeled and never combined with protocol-parity results.
 
 ### 8.1 External benchmark suites
 
-S1Compare should support benchmark adapters rather than copy datasets into application code.
+DecisionLens should support benchmark adapters rather than copy datasets into application code.
 
 Initial external suites:
 
@@ -252,7 +250,7 @@ Dataset adapters must preserve:
 - expected answer
 - reasoning/metadata fields if present
 
-### 8.2 S1Compare Stress Suite
+### 8.2 DecisionLens Stress Suite
 
 Create a small project-owned stress suite focused on behavior not captured well by static leaderboards.
 
@@ -343,7 +341,7 @@ Before latency measurement, perform configurable provider warmup requests.
 Default:
 
 - hosted provider: 5 warmup requests
-- local Lev: 20 warmup requests
+- Cloudflare Clef-flash: 5 warmup requests
 
 Warmup requests are excluded from benchmark metrics and cost summaries unless the provider charges for them; charged warmup cost may be recorded separately.
 
@@ -510,7 +508,7 @@ If full candidate distributions are available:
 
 These rules are mandatory.
 
-1. Never compare Lev compute-only latency against hosted-provider network latency in a headline chart.
+1. Compare all providers using end-to-end client-observed latency in headline charts.
 2. Never synthesize missing confidence/probabilities.
 3. Never silently exclude provider failures from accuracy. Report both:
    - accuracy over all benchmark rows (failure counts as miss)
@@ -520,8 +518,8 @@ These rules are mandatory.
 6. Record provider model/version identifiers whenever exposed.
 7. Separate protocol-parity and native-optimized results.
 8. Price calculations must use a dated pricing snapshot.
-9. Report hardware for every local Lev run.
-10. Do not claim vendor benchmark results as independently reproduced unless S1Compare actually ran them.
+9. Record the provider model identifier and endpoint type for every provider run.
+10. Do not claim vendor benchmark results as independently reproduced unless DecisionLens actually ran them.
 
 ---
 
@@ -547,7 +545,7 @@ FastAPI API
         +----------------+----------------+
         |                |                |
         v                v                v
- Jev Provider        Lev Provider     OpenAI Decisions
+ Jev Provider   Cloudflare Clef-flash   OpenAI Decisions
         |                |                |
         +----------------+----------------+
                          |
@@ -617,7 +615,6 @@ No agent orchestration layer is permitted in the core architecture.
 - Docker
 - Docker Compose
 - GitHub Actions
-- optional NVIDIA GPU profile for local Lev serving
 
 Do not introduce Kubernetes for v1.
 
@@ -823,19 +820,23 @@ Prefix all endpoints with `/api/v1`.
 
 ```text
 GET  /providers
-GET  /providers/{provider}/capabilities
-POST /providers/{provider}/healthcheck
 ```
+
+The provider list includes each provider's availability and capability snapshot. A
+provider-specific health check is deferred until an administration/settings area is
+needed.
 
 ### Dataset endpoints
 
 ```text
 GET  /datasets
 POST /datasets/upload
-GET  /datasets/{id}
 GET  /datasets/{id}/samples
-POST /datasets/{id}/validate
 ```
+
+Dataset upload validates the file before it is accepted and returns its validation
+summary. Dataset metadata and validation status are included in the dataset list;
+a separate validation endpoint is deferred until datasets can be edited in place.
 
 ### Playground
 
@@ -855,14 +856,15 @@ GET  /benchmarks
 GET  /benchmarks/{id}
 POST /benchmarks/{id}/cancel
 GET  /benchmarks/{id}/events       # SSE
-GET  /benchmarks/{id}/metrics
 GET  /benchmarks/{id}/predictions
-GET  /benchmarks/{id}/disagreements
-GET  /benchmarks/{id}/export.json
-GET  /benchmarks/{id}/export.csv
+GET  /benchmarks/{id}/export?format=json|csv
 ```
 
-Filtering for predictions/disagreements must support:
+The benchmark detail response includes summary metrics and run progress.
+Disagreements are retrieved from the predictions endpoint using filters rather than
+a separate endpoint.
+
+Filtering for predictions must support:
 
 - provider
 - primitive
@@ -946,7 +948,7 @@ Inputs:
 Output cards side by side:
 
 ```text
-Jev                Lev               OpenAI Decisions
+Jev          Cloudflare Clef-flash     OpenAI Decisions
 selected answer    selected answer   selected answer
 confidence          confidence/N/A    confidence/N/A
 probabilities       probabilities     probabilities/N/A
@@ -1102,19 +1104,7 @@ cost_per_1k = total_cost / completed_decisions * 1000
 cost_per_correct = total_cost / correct_decisions
 ```
 
-Do not treat local Lev inference as free.
-
-Support a configurable local compute-cost profile:
-
-```text
-usd_per_gpu_hour
-usd_per_cpu_hour
-```
-
-Report local-model economics separately as:
-
-- marginal API cost: $0
-- estimated infrastructure cost: calculated
+Use the dated Cloudflare Workers AI pricing snapshot for Clef-flash. Do not infer costs when provider usage or pricing data is unavailable.
 
 ---
 
@@ -1137,7 +1127,8 @@ DATABASE_URL
 REDIS_URL
 TYPESAFE_API_KEY
 TYPESAFE_BASE_URL
-LEV_BASE_URL
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN
 OPENAI_API_KEY
 OPENAI_DECISIONS_ENABLED
 ```
@@ -1282,7 +1273,7 @@ Use Conventional Commits where practical.
 ## 24. Repository Structure
 
 ```text
-s1compare/
+decisionlens/
 ├── README.md
 ├── PROJECT_SPEC.md
 ├── ARCHITECTURE.md
@@ -1304,7 +1295,7 @@ s1compare/
 │   │   ├── providers/
 │   │   │   ├── base.py
 │   │   │   ├── typesafe_jev.py
-│   │   │   ├── lev.py
+│   │   │   ├── cloudflare_clef_flash.py
 │   │   │   └── openai_decisions.py
 │   │   ├── datasets/
 │   │   ├── benchmarks/
@@ -1352,7 +1343,7 @@ Required services:
 - PostgreSQL
 - Redis
 
-Lev may be started as an optional compose profile or configured as an external endpoint.
+Cloudflare credentials are optional for local development. When absent, Clef-flash must report as unavailable without preventing startup.
 
 Jev/OpenAI unavailable credentials must not prevent application startup. Providers should simply report unavailable status.
 
@@ -1375,8 +1366,8 @@ Seed the application with a tiny fixture dataset and mocked provider mode so the
 ### Phase 2 — Provider adapters
 
 - Jev
-- Lev
-- OpenAI Decisions feature-gated adapter
+- Cloudflare Clef-flash
+- OpenAI Decisions adapter with configuration-based enablement
 - capability detection
 - raw + normalized result persistence
 
@@ -1431,10 +1422,10 @@ Seed the application with a tiny fixture dataset and mocked provider mode so the
 
 ## 27. Acceptance Criteria — v1
 
-S1Compare v1 is complete only when all of the following are true:
+DecisionLens v1 is complete only when all of the following are true:
 
-1. Jev and Lev can both execute real benchmark requests through provider adapters.
-2. OpenAI Decisions is implemented behind a feature flag or clearly stubbed pending preview access, without blocking the rest of the application.
+1. Jev and Cloudflare Clef-flash can both execute real benchmark requests through provider adapters.
+2. OpenAI Decisions is implemented behind a configuration flag and does not block the rest of the application when disabled.
 3. At least one external decision benchmark suite is ingestible by revision/hash.
 4. CSV/JSONL user datasets can be validated and benchmarked.
 5. Binary, categorical, ordinal, and multi-label workloads are supported.
@@ -1451,7 +1442,7 @@ S1Compare v1 is complete only when all of the following are true:
 16. Core domain/provider/metric tests meet the agreed coverage target.
 17. `docker compose up --build` launches a functional local system.
 18. CI passes linting, typing, tests, frontend build, E2E smoke, and Docker build.
-19. The README clearly states that S1Compare is independent and is not affiliated with TypeSafe, InterfazeAI, Hanno Labs, or OpenAI.
+19. The README clearly states that DecisionLens is independent and is not affiliated with TypeSafe, InterfazeAI, Hanno Labs, or OpenAI.
 20. No agent framework, RAG layer, MCP runtime, or unrelated AI feature is included in v1.
 
 ---
@@ -1534,7 +1525,7 @@ For every provider:
 
 ## 30. Final Product Definition
 
-S1Compare v1 is successful if a developer can open the application, select a pinned decision benchmark or upload a labeled dataset, run Jev/Lev/OpenAI Decisions under a reproducible configuration, and then answer from evidence:
+DecisionLens v1 is successful if a developer can open the application, select a pinned decision benchmark or upload a labeled dataset, run Jev/Cloudflare Clef-flash/OpenAI Decisions under a reproducible configuration, and then answer from evidence:
 
 - which systems were correct
 - where they disagreed
