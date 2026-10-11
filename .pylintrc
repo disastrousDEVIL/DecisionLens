@@ -1,0 +1,5 @@
+[MAIN]
+init-hook=import sys; sys.path.insert(0, "backend")
+
+[FORMAT]
+max-line-length=100
