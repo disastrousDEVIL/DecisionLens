@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 type Provider = { slug: string; display_name: string; available: boolean };
 type Result = { provider: string; model?: string; latency_ms_e2e: number; answers: Array<{ selected_option?: string; probabilities?: Record<string, number> }>; error?: string };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 const labels: Record<string, string> = { jev: "TypeSafe Jev", "clef-flash": "Cloudflare Clef-flash", "openai-decisions": "OpenAI Decisions" };
 const scorecards = [
   ["Accuracy", "Correct decisions against labeled ground truth", "cyan"],
@@ -27,7 +27,7 @@ export default function Home() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_URL}/api/v1/providers`)
+    fetch(`${API_URL}/providers`)
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("API unavailable")))
       .then(setProviders)
       .catch(() => setError("Dashboard is offline. Start the API to run comparisons."));
@@ -40,7 +40,7 @@ export default function Home() {
     if (!available.length) return;
     setRunning(true); setError("");
     try {
-      const response = await fetch(`${API_URL}/api/v1/compare`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ providers: available.map((provider) => provider.slug), decision: { state: scenario, questions: [{ id: "decision", primitive: "binary", instructions: "Is this a positive situation?" }] } }) });
+      const response = await fetch(`${API_URL}/compare`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ providers: available.map((provider) => provider.slug), decision: { state: scenario, questions: [{ id: "decision", primitive: "binary", instructions: "Is this a positive situation?" }] } }) });
       if (!response.ok) throw new Error("Comparison failed");
       setResults((await response.json()).results);
     } catch { setError("The comparison could not finish. Check provider credentials and the API service."); }
