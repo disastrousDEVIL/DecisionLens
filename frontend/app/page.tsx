@@ -25,6 +25,7 @@ export default function Home() {
   const [results, setResults] = useState<Result[]>([]);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [apiHealthy, setApiHealthy] = useState(false);
 
   useEffect(() => {
     fetch(`${API_URL}/providers`)
@@ -32,8 +33,22 @@ export default function Home() {
       .then(setProviders)
       .catch(() => setError("Dashboard is offline. Start the API to run comparisons."));
   }, []);
+  useEffect(() => {
+    async function checkHealth() {
+      try {
+        const response = await fetch(`${API_URL}/health`, { cache: "no-store" });
+        const data = await response.json();
+        setApiHealthy(response.ok && data.status === "ok");
+      } catch {
+        setApiHealthy(false);
+      }
+    }
+    void checkHealth();
+    const interval = window.setInterval(checkHealth, 15_000);
+    return () => window.clearInterval(interval);
+  }, []);
   const available = useMemo(() => providers.filter((provider) => provider.available), [providers]);
-  const apiConnected = !error && providers.length > 0;
+  const apiConnected = apiHealthy;
 
   async function runComparison(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,7 +64,7 @@ export default function Home() {
 
   const cards = providers.length ? providers : Object.entries(labels).map(([slug, display_name]) => ({ slug, display_name, available: false }));
   return <main>
-    <aside className="sidebar"><div className="brand"><span className="brand-mark">D</span><span>DecisionLens</span></div><nav aria-label="Dashboard sections"><a className="active" href="#overview">Overview</a><a href="#compare">Compare live</a><a href="#quality">Quality metrics</a><a href="#method">Benchmark method</a></nav><div className="sidebar-note"><span className="pulse" /> {available.length}/3 providers live</div></aside>
+    <aside className="sidebar"><div className="brand"><span className="brand-mark">D</span><span>DecisionLens</span></div><nav aria-label="Dashboard sections"><a className="active" href="#overview">Overview</a><a href="#compare">Compare live</a><a href="#quality">Quality metrics</a><a href="#method">Benchmark method</a></nav></aside>
     <section className="content">
       <header id="overview" className="topbar"><div><p className="eyebrow">Decision intelligence workspace</p><h1>See the trade-offs behind every answer.</h1><p className="lede">Evaluate bounded decisions across accuracy, calibration, speed, cost, and resilience—not a single opaque score.</p></div><div className="run-state"><span className={apiConnected ? "pulse" : "dot"} /> {apiConnected ? "API connected" : "API unavailable"}<br /><strong>{available.length} providers ready</strong></div></header>
       <section className="provider-row" aria-label="Provider connections">{cards.map((provider) => <article className="provider-card" key={provider.slug}><div className="provider-heading"><span className={provider.available ? "dot ready" : "dot"} />{provider.available ? "Connected" : "Checking"}</div><h2>{provider.display_name}</h2><p>{provider.slug === "jev" ? "System One decision engine" : provider.slug === "clef-flash" ? "Fast hosted decision model" : "Structured decision API"}</p></article>)}</section>
