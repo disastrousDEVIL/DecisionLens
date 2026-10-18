@@ -16,20 +16,25 @@ from app.schemas.decisions import DecisionQuestion, NormalizedDecisionRequest
 
 router = APIRouter()
 datasets_router = APIRouter()
-fixture_path = Path(__file__).parents[5] / "fixtures/datasets/decisionlens-starter-v1.jsonl"
+fixture_directory = Path(__file__).parents[5] / "fixtures/datasets"
+DEFAULT_DATASET_ID = "starter-v2"
 datasets: dict[str, list[dict[str, Any]]] = {
-    "starter-v1": [json.loads(line) for line in fixture_path.read_text(encoding="utf-8").splitlines()]
+    path.stem.removeprefix("decisionlens-"): [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
+    for path in sorted(fixture_directory.glob("decisionlens-starter-*.jsonl"))
 }
 runs: dict[str, dict[str, Any]] = {}
 
 
 class StartBenchmark(BaseModel):
-    dataset_id: str = "starter-v1"
+    dataset_id: str = DEFAULT_DATASET_ID
     providers: list[str] = Field(min_length=1)
 
 
 def metadata(dataset_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
-    return {"id": dataset_id, "name": "DecisionLens starter suite v1" if dataset_id == "starter-v1" else dataset_id, "samples": len(rows), "primitives": sorted({row["primitive"] for row in rows})}
+    name = f"DecisionLens starter suite {dataset_id.removeprefix('starter-')}" if dataset_id.startswith("starter-") else dataset_id
+    return {"id": dataset_id, "name": name, "samples": len(rows), "primitives": sorted({row["primitive"] for row in rows})}
 
 
 @datasets_router.get("")
