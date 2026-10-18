@@ -100,6 +100,7 @@ async def execute(run_id: str, rows: list[dict[str, Any]], provider_slugs: list[
                     "probabilities": probabilities,
                     "latency_ms": result.latency_ms_e2e,
                     "error": result.error,
+                    "is_refusal": answer.is_refusal if answer else False,
                     "tags": row.get("tags", []),
                     "domain": row.get("domain", "unspecified"),
                     "primitive": row["primitive"],
@@ -142,7 +143,8 @@ def metrics(results: list[dict[str, Any]], providers: list[str]) -> dict[str, An
             / len(row["options"])
             for row in probability_rows
         ]
-        invalid = [row for row in rows if not row["error"] and not valid_answer(row)]
+        refusals = [row for row in rows if row.get("is_refusal")]
+        invalid = [row for row in rows if not row["error"] and not row.get("is_refusal") and not valid_answer(row)]
         usage = [row.get("usage") or {} for row in rows]
         input_tokens = sum(item.get("input_tokens", 0) for item in usage)
         output_tokens = sum(item.get("output_tokens", 0) for item in usage)
@@ -163,6 +165,7 @@ def metrics(results: list[dict[str, Any]], providers: list[str]) -> dict[str, An
             "p50_latency_ms": percentile([row["latency_ms"] for row in rows], 0.50),
             "p95_latency_ms": percentile([row["latency_ms"] for row in rows], 0.95),
             "failure_rate": sum(bool(row["error"]) for row in rows) / len(rows) if rows else None,
+            "refusal_rate": len(refusals) / len(rows) if rows else None,
             "invalid_answer_rate": len(invalid) / len(rows) if rows else None,
             "cost_per_1000_usd": estimated_cost,
         }
@@ -176,17 +179,24 @@ def metrics(results: list[dict[str, Any]], providers: list[str]) -> dict[str, An
     comparable = [case_id for case_id in complete_cases if len({row["provider"] for row in results if row["case_id"] == case_id and row["selected"] is not None}) == len(providers)]
     disagreements = sum(len({row["selected"] for row in results if row["case_id"] == case_id}) > 1 for case_id in comparable)
     robustness: dict[str, float | None] = {}
+    robustness_coverage: dict[str, float | None] = {}
     for provider in providers:
-        pairs: dict[str, list[str]] = {}
+        pairs: dict[str, list[dict[str, Any]]] = {}
         for row in results:
             pair_id = row.get("metadata", {}).get("pair_id")
-            if row["provider"] == provider and pair_id and row["selected"]:
-                pairs.setdefault(pair_id, []).append(row["selected"])
-        valid_pairs = [answers for answers in pairs.values() if len(answers) == 2]
-        robustness[provider] = sum(len(set(answers)) == 1 for answers in valid_pairs) / len(valid_pairs) if valid_pairs else None
+            if row["provider"] == provider and pair_id:
+                pairs.setdefault(pair_id, []).append(row)
+        complete_pairs = [pair for pair in pairs.values() if len(pair) == 2 and all(row["selected"] for row in pair)]
+        stable_pairs = sum(pair[0]["selected"] == pair[1]["selected"] for pair in complete_pairs)
+        robustness[provider] = stable_pairs / len(pairs) if pairs else None
+        robustness_coverage[provider] = len(complete_pairs) / len(pairs) if pairs else None
     return {
         "providers": output,
-        "comparison": {"disagreement_rate": disagreements / len(comparable) if comparable else None, "robustness": robustness},
+        "comparison": {
+            "disagreement_rate": disagreements / len(comparable) if comparable else None,
+            "robustness": robustness,
+            "robustness_coverage": robustness_coverage,
+        },
         "reliability": reliability,
         "slices": slices,
     }
@@ -253,6 +263,13 @@ def slice_metrics(rows: list[dict[str, Any]], field: str) -> dict[str, dict[str,
         group: {
             "cases": len(group_rows := [row for row in rows if str(row.get(field, "unspecified")) == group]),
             "accuracy": sum(row["selected"] == row["expected"] for row in group_rows) / len(group_rows) if group_rows else None,
+            "invalid_answer_rate": sum(
+                not row["error"] and not row.get("is_refusal") and not valid_answer(row)
+                for row in group_rows
+            )
+            / len(group_rows)
+            if group_rows
+            else None,
         }
         for group in groups
     }

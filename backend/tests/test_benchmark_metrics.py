@@ -13,6 +13,7 @@ def result(**overrides: object) -> dict[str, object]:
         "probabilities": None,
         "latency_ms": 100.0,
         "error": None,
+        "is_refusal": False,
         "tags": [],
         "domain": "incident",
         "primitive": "ordinal",
@@ -58,3 +59,34 @@ def test_invalid_answer_is_not_counted_as_correct() -> None:
     provider = summary["providers"]["jev"]
     assert provider["accuracy"] == 0.0
     assert provider["invalid_answer_rate"] == 1.0
+
+
+def test_primitive_slice_reports_invalid_answer_rate() -> None:
+    summary = metrics([result(selected=None)], ["jev"])
+
+    ordinal = summary["slices"]["jev"]["primitive"]["ordinal"]
+    assert ordinal["invalid_answer_rate"] == 1.0
+
+
+def test_refusal_is_reported_separately_from_an_invalid_answer() -> None:
+    summary = metrics([result(selected=None, is_refusal=True)], ["jev"])
+
+    provider = summary["providers"]["jev"]
+    assert provider["refusal_rate"] == 1.0
+    assert provider["invalid_answer_rate"] == 0.0
+    assert summary["slices"]["jev"]["primitive"]["ordinal"]["invalid_answer_rate"] == 0.0
+
+
+def test_robustness_counts_refused_pairs_and_reports_coverage() -> None:
+    completed_pair = [
+        result(case_id="pair-1-a", metadata={"pair_id": "pair-1"}),
+        result(case_id="pair-1-b", metadata={"pair_id": "pair-1"}),
+    ]
+    refused_pair = [
+        result(case_id="pair-2-a", metadata={"pair_id": "pair-2"}),
+        result(case_id="pair-2-b", selected=None, is_refusal=True, metadata={"pair_id": "pair-2"}),
+    ]
+
+    comparison = metrics(completed_pair + refused_pair, ["jev"])["comparison"]
+    assert comparison["robustness"]["jev"] == 0.5
+    assert comparison["robustness_coverage"]["jev"] == 0.5
