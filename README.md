@@ -6,31 +6,38 @@ DecisionLens runs the same decision tasks across TypeSafe Jev, Cloudflare Clef-f
 
 [Results](#benchmark-results) · [Live comparison](#dashboard) · [Quick start](#quick-start) · [More details](#more-details)
 
-![DecisionLens benchmark scorecard](media/benchmark-scorecard.png)
+![DecisionLens benchmark scorecard](media/benchmark_scorecard.png)
 
 ## Benchmark results
 
-**100 cases · 3 providers · 300 provider evaluations**
+**300 cases · 3 providers · 900 provider evaluations**
 
 Recorded from a live API run. These numbers match the saved scorecard above and reflect that run’s scoring implementation.
 
+**Recorded run at a glance**
+
+- **TypeSafe Jev** → 86.0% accuracy, 369 ms p50, ~$0.013 per 1K decisions
+- **Cloudflare Clef-flash** → 82.0% accuracy, 283 ms p50, ~$0.007 per 1K decisions
+- **OpenAI Decisions** → 81.3% accuracy, 182 ms p50, ~$0.015 per 1K decisions
+
 | Metric | TypeSafe Jev | Cloudflare Clef-flash | OpenAI Decisions |
 | --- | ---: | ---: | ---: |
-| Accuracy | 80.0% | 69.0% | 70.0% |
-| Macro-F1 | 66.7% | 60.9% | 63.6% |
-| Calibration loss (as displayed) | 0.6% | 7.6% | 6.4% |
-| Calibration error | 4.0% | 5.4% | 5.9% |
-| p50 latency | 383 ms | 641 ms | 211 ms |
-| p95 latency | 561 ms | 1,971 ms | 504 ms |
-| Invalid answers | 20.0% | 20.0% | 22.0% |
+| Accuracy | 86.0% | 82.0% | 81.3% |
+| Macro-F1 | 79.1% | 72.3% | 78.4% |
+| Calibration loss (as displayed) | 8.8% | 9.9% | 10.7% |
+| Calibration error | 12.8% | 9.9% | 15.8% |
+| p50 latency | 369 ms | 283 ms | 182 ms |
+| p95 latency | 430 ms | 1,522 ms | 285 ms |
+| Provider refusals | 0.0% | 0.0% | 2.7% |
+| Invalid answers | 0.0% | 0.0% | 0.0% |
 | API request failures | 0.0% | 0.0% | 0.0% |
-| Wording robustness | 100.0% | 100.0% | 100.0% |
-| Estimated cost per 1,000 decisions | $0.013 | $0.007 | $0.016 |
+| Wording robustness | 100.0% (100% coverage) | 100.0% (100% coverage) | 40.0% (47% coverage) |
+| Estimated cost per 1,000 decisions | $0.013 | $0.007 | $0.015 |
 
-- **Provider disagreement:** 19.4% of comparable cases.
-- **Observed throughput:** 3.39 provider decisions per second across the run.
+- **Provider disagreement:** 7.9% of comparable cases.
+- **Observed throughput:** 4.94 provider decisions per second across the run.
 
-In this run: **Jev led on accuracy**, **OpenAI Decisions on latency**, and **Clef-flash on estimated cost**.
+In this run: **Jev led on accuracy**, **OpenAI Decisions on latency**, and **Clef-flash on estimated cost**. OpenAI Decisions declined 2.7% of cases, which reduces its wording-robustness coverage.
 
 ## Dashboard
 
@@ -81,7 +88,7 @@ Open the [dashboard](http://localhost:3000). Interactive [API documentation](htt
 ### 4. Run a comparison
 
 - Use **Compare 3 providers** in the decision workbench to try the configured providers on one scenario.
-- Select **Run 100-case starter suite** to populate the benchmark scorecards. This makes billable requests to the selected providers.
+- Select **Run 300-case starter suite** to populate the benchmark scorecards. This makes billable requests to the selected providers.
 
 ## More details
 
@@ -116,9 +123,9 @@ DecisionLens is independent and not affiliated with TypeSafe, Cloudflare, or Ope
 | Wording robustness | Whether paired versions of a scenario receive the same answer |
 | Observed throughput | Completed provider decisions per second during the run |
 
-The starter suite has **50 binary, 30 choice, and 20 ordinal cases**. It covers arithmetic, rules, support routing, ambiguity, severity, and five equivalent-wording pairs.
+The default v2 starter suite has **150 binary, 90 choice, and 60 ordinal cases** across ten domains, including arithmetic, rules, boundaries, routing, invariance, robustness, incident severity, and risk assessment.
 
-Running all three providers produces **300 provider evaluations**, not 300 unique cases.
+Running all three providers produces **900 provider evaluations**, not 900 unique cases. The original 100-case v1 suite remains available for reproducible earlier runs.
 
 </details>
 
