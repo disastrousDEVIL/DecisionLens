@@ -5,6 +5,7 @@ import httpx
 
 from app.core.config import Settings
 from app.providers.base import DecisionProvider, ProviderCapabilities
+from app.providers.normalization import normalize_score_probabilities
 from app.schemas.decisions import Answer, NormalizedDecisionRequest, ProviderResult
 
 
@@ -72,6 +73,8 @@ class TypeSafeJevProvider(DecisionProvider):
             probability = float(answer["noul"])
             probabilities = {"yes": probability, "no": 1 - probability}
             selected = "yes" if probability >= 0.5 else "no"
+        elif answer.get("type") == "score":
+            probabilities = normalize_score_probabilities(probabilities, answer.get("legend"))
         return Answer(
             question_id=question_id,
             selected_option=selected,

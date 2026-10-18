@@ -36,6 +36,7 @@ class Answer(BaseModel):
     probabilities: dict[str, float] | None = None
     confidence: float | None = None
     ordinal_expected_value: float | None = None
+    is_refusal: bool = False
 
 
 class ProviderResult(BaseModel):

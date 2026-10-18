@@ -61,11 +61,19 @@ class OpenAIDecisionsProvider(DecisionProvider):
 
     @staticmethod
     def _normalize_answer(answer: dict[str, Any]) -> Answer:
+        is_score = answer.get("type") == "score"
         probabilities = {
-            str(item.get("value", item.get("label"))): float(item["probability"])
+            str(item.get("label") if is_score else item.get("value")): float(item["probability"])
             for item in answer.get("probabilities", [])
         } or None
         if answer.get("type") == "predicate":
             probability = float(answer.get("probability", 0))
             probabilities = {"yes": probability, "no": 1 - probability}
-        return Answer(question_id=answer.get("name", "unknown"), selected_option=answer.get("choice"), probabilities=probabilities, confidence=answer.get("confidence"), ordinal_expected_value=answer.get("score"))
+        return Answer(
+            question_id=answer.get("name", "unknown"),
+            selected_option=answer.get("choice"),
+            probabilities=probabilities,
+            confidence=answer.get("confidence"),
+            ordinal_expected_value=answer.get("score"),
+            is_refusal=answer.get("type") == "refusal",
+        )
