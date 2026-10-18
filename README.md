@@ -4,33 +4,15 @@
 
 DecisionLens runs the same decision tasks across TypeSafe Jev, Cloudflare Clef-flash, and OpenAI Decisions. Compare answer quality, confidence, response time, estimated cost, and consistency in one dashboard.
 
-[Quick start](#quick-start) · [Results](#benchmark-results) · [Dashboard](#dashboard) · [Metrics](#what-we-measure) · [API](#api-reference)
+[Results](#benchmark-results) · [Live comparison](#dashboard) · [Quick start](#quick-start) · [More details](#more-details)
 
-DecisionLens is independent and not affiliated with TypeSafe, Cloudflare, or OpenAI.
-
-## What is a System One Model?
-
-DecisionLens evaluates systems that turn shared evidence into a bounded, machine-readable decision rather than open-ended generated text. A request supplies evidence plus a typed question, then receives a probability for a predicate, a selection from fixed choices, or a score against ordered levels.
-
-“System One Model” is TypeSafe’s term for models optimized for fast, structured, probabilistic decisions in software. It is not a general label for every provider in this repository. [TypeSafe’s Jev announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
-
-## Providers in this benchmark
-
-### TypeSafe Jev
-
-Jev is TypeSafe’s public System One Model. Its `/v1/systemone` API accepts shared state and named typed questions, then returns decisions for yes/no predicates, fixed choices, and ordered scores, together with token usage. [Jev API reference](https://api.typesafe.ai/redoc)
-
-### Cloudflare Clef-flash
-
-Clef-flash is Cloudflare’s hosted 9B multimodal decision model. It accepts text, structured JSON, images, or video and returns typed answers with probabilities for the permitted options. DecisionLens uses its Workers AI REST endpoint. [Cloudflare model documentation](https://developers.cloudflare.com/ai/models/%40cf/cloudflare/clef-flash/)
-
-### OpenAI Decisions
-
-OpenAI Decisions is a dedicated API for typed predicate, choice, and score answers over text and image input. It currently uses `gpt-6-luna` and is documented as a public beta API. [OpenAI Decisions guide](https://developers.openai.com/api/docs/guides/decisions)
+![DecisionLens benchmark scorecard](media/benchmark-scorecard.png)
 
 ## Benchmark results
 
-The following numbers were recorded from a live API run of the **100-case starter suite across all three providers** (300 provider evaluations). Values are transcribed from the saved scorecard below and reflect that run's scoring implementation.
+**100 cases · 3 providers · 300 provider evaluations**
+
+Recorded from a live API run. These numbers match the saved scorecard above and reflect that run’s scoring implementation.
 
 | Metric | TypeSafe Jev | Cloudflare Clef-flash | OpenAI Decisions |
 | --- | ---: | ---: | ---: |
@@ -48,43 +30,13 @@ The following numbers were recorded from a live API run of the **100-case starte
 - **Provider disagreement:** 19.4% of comparable cases.
 - **Observed throughput:** 3.39 provider decisions per second across the run.
 
-Jev recorded the highest accuracy in this run, OpenAI Decisions had the lowest p50 and p95 latency, and Clef-flash had the lowest estimated cost per 1,000 decisions.
-
-![DecisionLens benchmark scorecard](media/benchmark-scorecard.png)
-
+In this run: **Jev led on accuracy**, **OpenAI Decisions on latency**, and **Clef-flash on estimated cost**.
 
 ## Dashboard
 
-### Live provider comparison
+Try one scenario. Compare each provider’s answer, confidence, and response time side by side.
 
 ![DecisionLens live provider comparison workbench](media/live-comparison-workbench.png)
-
-Try a single scenario and inspect each provider’s answer, confidence, and response time.
-
-## What you can do
-
-- FastAPI API with provider availability reporting and `POST /api/v1/compare`.
-- Isolated adapters for Jev, Clef-flash, and OpenAI Decisions.
-- Safe server-side environment configuration; credentials never reach the browser.
-- Next.js dashboard with a live comparison workbench and benchmark scorecards.
-- A 100-case starter suite across binary, choice, ordinal, ambiguity, invariance, and paired wording tests.
-- In-memory benchmark jobs with accuracy, macro-F1, categorical Brier loss, expected calibration error, p50/p95 latency, invalid and API-failure rates, cost estimates, disagreement, robustness, and observed throughput.
-- Provider and API validation tests that do not make paid external calls.
-
-## What we measure
-
-| Metric | What it tells you |
-| --- | --- |
-| Accuracy and macro-F1 | How answers compare with the dataset’s expected labels |
-| Brier loss and calibration error | How well predicted probabilities match observed outcomes |
-| p50 / p95 latency | Typical and slower response times, including network overhead |
-| Invalid answers and API failures | Whether responses can be scored and requests complete successfully |
-| Estimated cost per 1,000 decisions | Token usage multiplied by the configured provider rates |
-| Provider disagreement | How often providers choose different answers on comparable cases |
-| Wording robustness | Whether paired versions of a scenario receive the same answer |
-| Observed throughput | Completed provider decisions per second during the run |
-
-The starter suite contains **100 cases**: 50 binary, 30 choice, and 20 ordinal tasks. Running all three providers produces **300 provider evaluations**. Cases cover arithmetic, rules, support routing, ambiguity, severity, and five equivalent-wording pairs.
 
 ## Quick start
 
@@ -130,9 +82,69 @@ Open the [dashboard](http://localhost:3000). Interactive [API documentation](htt
 
 - Use **Compare 3 providers** in the decision workbench to try the configured providers on one scenario.
 - Select **Run 100-case starter suite** to populate the benchmark scorecards. This makes billable requests to the selected providers.
-- To use your own labelled dataset, upload a JSONL file through `POST /api/v1/datasets/upload`, then pass its ID to `POST /api/v1/benchmarks/run`.
 
-## Development checks
+## More details
+
+<details>
+<summary><strong>System One models and the three providers</strong></summary>
+
+DecisionLens compares bounded decisions: yes/no answers, selections from fixed choices, and scores against ordered levels—not open-ended generated text.
+
+“System One Model” is TypeSafe’s term for models built for fast, structured, probabilistic decisions. It is not a general label for all three providers. [TypeSafe’s introduction](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
+
+| Provider | What it is | Reference |
+| --- | --- | --- |
+| TypeSafe Jev | TypeSafe’s public System One Model. Its `/v1/systemone` API accepts shared state and typed questions, returning decisions and token usage. | [API reference](https://api.typesafe.ai/redoc) |
+| Cloudflare Clef-flash | A hosted 9B multimodal decision model that returns typed answers and option probabilities. DecisionLens calls it through Workers AI. | [Model documentation](https://developers.cloudflare.com/ai/models/%40cf/cloudflare/clef-flash/) |
+| OpenAI Decisions | A public beta API for predicate, choice, and score answers over text and images, using `gpt-6-luna`. | [Decisions guide](https://developers.openai.com/api/docs/guides/decisions) |
+
+DecisionLens is independent and not affiliated with TypeSafe, Cloudflare, or OpenAI.
+
+</details>
+
+<details>
+<summary><strong>Metrics and the starter dataset</strong></summary>
+
+| Metric | What it tells you |
+| --- | --- |
+| Accuracy and macro-F1 | How answers compare with the dataset’s expected labels |
+| Brier loss and calibration error | How well predicted probabilities match observed outcomes |
+| p50 / p95 latency | Typical and slower response times, including network overhead |
+| Invalid answers and API failures | Whether responses can be scored and requests complete successfully |
+| Estimated cost per 1,000 decisions | Token usage multiplied by the configured provider rates |
+| Provider disagreement | How often providers choose different answers on comparable cases |
+| Wording robustness | Whether paired versions of a scenario receive the same answer |
+| Observed throughput | Completed provider decisions per second during the run |
+
+The starter suite has **50 binary, 30 choice, and 20 ordinal cases**. It covers arithmetic, rules, support routing, ambiguity, severity, and five equivalent-wording pairs.
+
+Running all three providers produces **300 provider evaluations**, not 300 unique cases.
+
+</details>
+
+<details>
+<summary><strong>API reference and custom datasets</strong></summary>
+
+Upload a labelled JSONL file through `POST /api/v1/datasets/upload`. Pass the returned dataset ID to `POST /api/v1/benchmarks/run`.
+
+```text
+GET  /health
+GET  /api/v1/providers
+POST /api/v1/compare
+GET  /api/v1/datasets
+POST /api/v1/datasets/upload
+POST /api/v1/benchmarks/run
+GET  /api/v1/benchmarks/{run_id}
+```
+
+With the backend running, open the [interactive API documentation](http://localhost:8000/docs) for request schemas.
+
+</details>
+
+<details>
+<summary><strong>Development checks and project layout</strong></summary>
+
+### Development checks
 
 From the repository root:
 
@@ -145,19 +157,7 @@ cd frontend && npx tsc --noEmit
 
 The backend tests use local fixtures and do not make paid provider calls.
 
-## API reference
-
-```text
-GET  /health
-GET  /api/v1/providers
-POST /api/v1/compare
-GET  /api/v1/datasets
-POST /api/v1/datasets/upload
-POST /api/v1/benchmarks/run
-GET  /api/v1/benchmarks/{run_id}
-```
-
-## Project layout
+### Project layout
 
 ```text
 backend/       FastAPI routes, provider adapters, configuration, and tests
@@ -167,6 +167,10 @@ media/         README screenshots
 ```
 
 The repository separates the backend and frontend; backend application modules live under `backend/app/`.
+
+FastAPI handles provider adapters and in-memory benchmark jobs. Next.js provides the dashboard and server-side API proxies. Credentials stay on the server.
+
+</details>
 
 ## License
 
