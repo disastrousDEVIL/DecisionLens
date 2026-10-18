@@ -1,10 +1,14 @@
-# DecisionLens
+# DecisionLens 🔎
 
-Benchmark and compare TypeSafe Jev, Cloudflare Clef-flash, and OpenAI Decisions across accuracy, calibration, latency, cost, and robustness.
+**See the trade-offs behind every answer.**
+
+DecisionLens runs the same decision tasks across TypeSafe Jev, Cloudflare Clef-flash, and OpenAI Decisions. Compare answer quality, confidence, response time, estimated cost, and consistency in one dashboard.
+
+[Quick start](#quick-start) · [Dashboard](#dashboard) · [Metrics](#what-we-measure) · [API](#api-reference)
 
 DecisionLens is independent and not affiliated with TypeSafe, Cloudflare, or OpenAI.
 
-## System One and typed decisions
+## What is a System One Model?
 
 DecisionLens evaluates systems that turn shared evidence into a bounded, machine-readable decision rather than open-ended generated text. A request supplies evidence plus a typed question, then receives a probability for a predicate, a selection from fixed choices, or a score against ordered levels.
 
@@ -24,17 +28,21 @@ Clef-flash is Cloudflare’s hosted 9B multimodal decision model. It accepts tex
 
 OpenAI Decisions is a dedicated API for typed predicate, choice, and score answers over text and image input. It currently uses `gpt-6-luna` and is documented as a public beta API. [OpenAI Decisions guide](https://developers.openai.com/api/docs/guides/decisions)
 
-## Product preview
+## Dashboard
 
 ### Benchmark scorecard
 
 ![DecisionLens benchmark scorecard](media/benchmark-scorecard.png)
 
+Compare providers side by side across quality, latency, and estimated cost. Screenshots capture individual development runs; their values are examples, not general provider rankings.
+
 ### Live provider comparison
 
 ![DecisionLens live provider comparison workbench](media/live-comparison-workbench.png)
 
-## Current foundation
+Try a single scenario and inspect each provider’s answer, confidence, and response time.
+
+## What you can do
 
 - FastAPI API with provider availability reporting and `POST /api/v1/compare`.
 - Isolated adapters for Jev, Clef-flash, and OpenAI Decisions.
@@ -44,9 +52,26 @@ OpenAI Decisions is a dedicated API for typed predicate, choice, and score answe
 - In-memory benchmark jobs with accuracy, macro-F1, categorical Brier loss, expected calibration error, p50/p95 latency, invalid and API-failure rates, cost estimates, disagreement, robustness, and observed throughput.
 - Provider and API validation tests that do not make paid external calls.
 
-Dataset upload is available at `POST /api/v1/datasets/upload`. Benchmark jobs are intentionally in memory for this local MVP: restarting the backend removes prior runs. Persistent jobs and a detailed result explorer remain future work.
+## What we measure
 
-## Configure providers
+| Metric | What it tells you |
+| --- | --- |
+| Accuracy and macro-F1 | How answers compare with the dataset’s expected labels |
+| Brier loss and calibration error | How well predicted probabilities match observed outcomes |
+| p50 / p95 latency | Typical and slower response times, including network overhead |
+| Invalid answers and API failures | Whether responses can be scored and requests complete successfully |
+| Estimated cost per 1,000 decisions | Token usage multiplied by the configured provider rates |
+| Provider disagreement | How often providers choose different answers on comparable cases |
+| Wording robustness | Whether paired versions of a scenario receive the same answer |
+| Observed throughput | Completed provider decisions per second during the run |
+
+The starter suite contains **100 cases**: 50 binary, 30 choice, and 20 ordinal tasks. Running all three providers produces **300 provider evaluations**. Cases cover arithmetic, rules, support routing, ambiguity, severity, and five equivalent-wording pairs.
+
+## Quick start
+
+You’ll need Python 3.12+, [uv](https://docs.astral.sh/uv/), a Node.js version supported by Next.js 15, npm, and credentials for at least one provider.
+
+### 1. Configure providers
 
 Copy the example file, then supply only the providers you want to use:
 
@@ -60,7 +85,9 @@ cp .env.example .env
 | Cloudflare Clef-flash | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
 | OpenAI Decisions | `OPENAI_API_KEY`, `OPENAI_DECISIONS_ENABLED=true` |
 
-## Run locally
+Keep `.env` in the repository root. Credentials are read by the backend; do not place them in public frontend environment variables.
+
+### 2. Start the backend
 
 ```bash
 cd backend
@@ -68,7 +95,9 @@ uv sync --group dev
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-In a second terminal:
+### 3. Start the frontend
+
+In a second terminal, from the repository root:
 
 ```bash
 cd frontend
@@ -76,16 +105,28 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. API documentation is available at `http://localhost:8000/docs`.
+Open the [dashboard](http://localhost:3000). Interactive [API documentation](http://localhost:8000/docs) is also available.
 
-## Verify
+### 4. Run a comparison
+
+- Use **Compare 3 providers** in the decision workbench to try the configured providers on one scenario.
+- Select **Run 100-case starter suite** to populate the benchmark scorecards. This makes billable requests to the selected providers.
+- To use your own labelled dataset, upload a JSONL file through `POST /api/v1/datasets/upload`, then pass its ID to `POST /api/v1/benchmarks/run`.
+
+## Development checks
+
+From the repository root:
 
 ```bash
 make api-test
 make api-lint
+npm --prefix frontend run lint
+cd frontend && npx tsc --noEmit
 ```
 
-## API available now
+The backend tests use local fixtures and do not make paid provider calls.
+
+## API reference
 
 ```text
 GET  /health
@@ -96,6 +137,25 @@ POST /api/v1/datasets/upload
 POST /api/v1/benchmarks/run
 GET  /api/v1/benchmarks/{run_id}
 ```
+
+## Project layout
+
+```text
+backend/       FastAPI routes, provider adapters, configuration, and tests
+frontend/      Next.js dashboard and server-side API proxies
+fixtures/      Versioned benchmark datasets
+media/         README screenshots
+```
+
+The repository separates the backend and frontend; backend application modules live under `backend/app/`.
+
+## Current limitations
+
+- Benchmark jobs and uploaded datasets live in memory. Restarting the backend clears them.
+- Providers run concurrently within each case; cases run sequentially. Observed throughput does not measure maximum concurrency capacity.
+- The starter suite is a small synthetic evaluation, not a comprehensive fairness or reliability assessment.
+- Cost figures are estimates from configured rates and recorded usage, not billing receipts.
+- Persistent storage, a detailed result explorer, and controlled concurrency tests remain planned work.
 
 ## License
 
