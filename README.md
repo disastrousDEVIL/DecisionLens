@@ -1,10 +1,10 @@
-# DecisionLens 🔎
+# DecisionLens
 
 **See the trade-offs behind every answer.**
 
 DecisionLens runs the same decision tasks across TypeSafe Jev, Cloudflare Clef-flash, and OpenAI Decisions. Compare answer quality, confidence, response time, estimated cost, and consistency in one dashboard.
 
-[Quick start](#quick-start) · [Dashboard](#dashboard) · [Metrics](#what-we-measure) · [API](#api-reference)
+[Quick start](#quick-start) · [Results](#benchmark-results) · [Dashboard](#dashboard) · [Metrics](#what-we-measure) · [API](#api-reference)
 
 DecisionLens is independent and not affiliated with TypeSafe, Cloudflare, or OpenAI.
 
@@ -28,13 +28,32 @@ Clef-flash is Cloudflare’s hosted 9B multimodal decision model. It accepts tex
 
 OpenAI Decisions is a dedicated API for typed predicate, choice, and score answers over text and image input. It currently uses `gpt-6-luna` and is documented as a public beta API. [OpenAI Decisions guide](https://developers.openai.com/api/docs/guides/decisions)
 
-## Dashboard
+## Benchmark results
 
-### Benchmark scorecard
+The following numbers were recorded from a live API run of the **100-case starter suite across all three providers** (300 provider evaluations). Values are transcribed from the saved scorecard below and reflect that run's scoring implementation.
+
+| Metric | TypeSafe Jev | Cloudflare Clef-flash | OpenAI Decisions |
+| --- | ---: | ---: | ---: |
+| Accuracy | 80.0% | 69.0% | 70.0% |
+| Macro-F1 | 66.7% | 60.9% | 63.6% |
+| Calibration loss (as displayed) | 0.6% | 7.6% | 6.4% |
+| Calibration error | 4.0% | 5.4% | 5.9% |
+| p50 latency | 383 ms | 641 ms | 211 ms |
+| p95 latency | 561 ms | 1,971 ms | 504 ms |
+| Invalid answers | 20.0% | 20.0% | 22.0% |
+| API request failures | 0.0% | 0.0% | 0.0% |
+| Wording robustness | 100.0% | 100.0% | 100.0% |
+| Estimated cost per 1,000 decisions | $0.013 | $0.007 | $0.016 |
+
+- **Provider disagreement:** 19.4% of comparable cases.
+- **Observed throughput:** 3.39 provider decisions per second across the run.
+
+Jev recorded the highest accuracy in this run, OpenAI Decisions had the lowest p50 and p95 latency, and Clef-flash had the lowest estimated cost per 1,000 decisions.
 
 ![DecisionLens benchmark scorecard](media/benchmark-scorecard.png)
 
-Compare providers side by side across quality, latency, and estimated cost. Screenshots capture individual development runs; their values are examples, not general provider rankings.
+
+## Dashboard
 
 ### Live provider comparison
 
@@ -148,14 +167,6 @@ media/         README screenshots
 ```
 
 The repository separates the backend and frontend; backend application modules live under `backend/app/`.
-
-## Current limitations
-
-- Benchmark jobs and uploaded datasets live in memory. Restarting the backend clears them.
-- Providers run concurrently within each case; cases run sequentially. Observed throughput does not measure maximum concurrency capacity.
-- The starter suite is a small synthetic evaluation, not a comprehensive fairness or reliability assessment.
-- Cost figures are estimates from configured rates and recorded usage, not billing receipts.
-- Persistent storage, a detailed result explorer, and controlled concurrency tests remain planned work.
 
 ## License
 
