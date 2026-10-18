@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@types/node": "^22.10.2",
@@ -16,6 +16,8 @@
     "react-dom": "^19.0.0",
     "typescript": "^5.7.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.27"
+  }
 }
-
